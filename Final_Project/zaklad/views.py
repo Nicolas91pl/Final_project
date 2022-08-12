@@ -8,7 +8,7 @@ from .serializers import WorkTypeSerializer, ExpansesSerializer, CustomerSeriali
 from datetime import datetime
 
 class WorkTypeApiView(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAdminUser]
 
     def get(self, request, *args, **kwargs):
         work = Work_Type.objects.all()
@@ -353,75 +353,48 @@ class OrderDetailApiView(APIView):
         serializer = OrderSerializer(order_instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def start_work(self, request, order_id, *args, **kwargs):
-        order_instance = self.get_object(order_id)
-        if not order_instance:
-            return Response(
-                {"res": "Order does not exists"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        data = {'start_time': datetime.now().time()}
-        serializer = OrderSerializer(instance=order_instance, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def stop_work(self, request, order_id, *args, **kwargs):
-        order_instance = self.get_object(order_id)
-        if not order_instance:
-            return Response(
-                {"res": "Order does not exists"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        stop_time = datetime.now().time()
-        start_time = order_instance.start_time
-        s1 = str(stop_time).split(':')
-        s2 = str(start_time).split(':')
-        work_time = order_instance.work_time
-        work_time += int(s1[0]) - int(s2[0])
-        if int(s1[1]) - int(s2[1]) < 0:
-            result = 60 - int(s1[1]) - int(s2[1])
-            if result < 20:
-                work_time = work_time - 1
-        elif int(s1[1]) - int(s2[1]) > 30:
-            work_time = work_time + 1
-
-        data = {'stop_time': stop_time,
-                'work_time': work_time}
-        serializer = OrderSerializer(instance=order_instance, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def work_cost(self, request, order_id):
-        order_instance = self.get_object(order_id)
-        if not order_instance:
-            return Response(
-                {"res": "Order does not exists"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        expanses_instance = Expanses.object.get(name='Obecne')
-        getcontext().prec = 4
-        work_list = order_instance.work_types
-        mid_others_cost = Decimal((expanses_instance.salary + expanses_instance.others)/165)
-        mid_energy_cost = Decimal(expanses_instance.energy / 165)
-        mid_machine_usage = 0
-        for i in work_list:
-            mid_machine_usage += Work_Type.object.get(id=i).machine_usage
-        mid_machine_usage = Decimal(mid_machine_usage/100/len(work_list))
-        cost = Decimal(((mid_machine_usage * mid_energy_cost)+mid_others_cost) * order_instance.work_time)
-
-        data = {
-            'cost': cost
-        }
-        serializer = OrderSerializer(instance=order_instance, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def start_work(self, request, order_id, *args, **kwargs):
+    #     order_instance = self.get_object(order_id)
+    #     if not order_instance:
+    #         return Response(
+    #             {"res": "Order does not exists"},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+    #     data = {'start_time': datetime.now().time()}
+    #     serializer = OrderSerializer(instance=order_instance, data=data, partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #
+    # def stop_work(self, request, order_id, *args, **kwargs):
+    #     order_instance = self.get_object(order_id)
+    #     if not order_instance:
+    #         return Response(
+    #             {"res": "Order does not exists"},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+    #
+    #     stop_time = datetime.now().time()
+    #     start_time = order_instance.start_time
+    #     s1 = str(stop_time).split(':')
+    #     s2 = str(start_time).split(':')
+    #     work_time = order_instance.work_time
+    #     work_time += int(s1[0]) - int(s2[0])
+    #     if int(s1[1]) - int(s2[1]) < 0:
+    #         result = 60 - int(s1[1]) - int(s2[1])
+    #         if result < 20:
+    #             work_time = work_time - 1
+    #     elif int(s1[1]) - int(s2[1]) > 30:
+    #         work_time = work_time + 1
+    #
+    #     data = {'stop_time': stop_time,
+    #             'work_time': work_time}
+    #     serializer = OrderSerializer(instance=order_instance, data=data, partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     def put(self, request, order_id, *args, **kwargs):
@@ -431,6 +404,22 @@ class OrderDetailApiView(APIView):
                 {"res": "Order does not exists"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        order_instance = self.get_object(order_id)
+        if not order_instance:
+            return Response(
+                {"res": "Order does not exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        expanses_instance = Expanses.objects.get(name='Obecne')
+        getcontext().prec = 4
+        work_list = order_instance.work_types
+        mid_others_cost = Decimal((float(expanses_instance.salary) + float(expanses_instance.others)) / 165)
+        mid_energy_cost = Decimal(float(expanses_instance.energy) / 165)
+        mid_machine_usage = 57
+        # for i in work_list:
+        #     mid_machine_usage += Work_Type.objects.get(id=i).machine_usage
+        # mid_machine_usage = Decimal(mid_machine_usage / 100 / len(work_list))
+        cost = Decimal(((mid_machine_usage * mid_energy_cost) + mid_others_cost) * int(order_instance.work_time))
         data = {
             'customer': request.data.get('customer'),
             'active': request.data.get('active'),
@@ -446,7 +435,7 @@ class OrderDetailApiView(APIView):
             'start_time': request.data.get('start_time'),
             'stop_time': request.data.get('stop_time'),
             'work_time': request.data.get('work_time'),
-            'cost': request.data.get('cost'),
+            'cost': cost,
         }
         serializer = OrderSerializer(instance=order_instance, data=data, partial=True)
         if serializer.is_valid():

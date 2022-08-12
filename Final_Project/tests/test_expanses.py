@@ -1,5 +1,5 @@
 import pytest
-from rest_framework import status
+
 
 valid_data = {
             'name': 'Obecne', 'actual': True, 'energy': 8000,
@@ -35,7 +35,7 @@ def test_random_client_expanses_list(client):
 
 
 @pytest.mark.django_db
-def test_admin_expanses_CRUD(client, admin_logged, created_db):
+def test_admin_expanses_CRUD(client, admin_logged, db_create):
     response = client.get('/zmz/expanses/Obecne')
     response1 = client.get('/zmz/expanses/dgihu')
     assert response.status_code == 200

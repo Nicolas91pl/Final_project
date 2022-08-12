@@ -39,7 +39,7 @@ def test_random_client_customers_list(client):
 
 
 @pytest.mark.django_db
-def test_admin_customers_CRUD(client, admin_logged, created_db):
+def test_admin_customers_CRUD(client, admin_logged, db_create):
     inst = models.Customers.objects.all().first()
     inst.refresh_from_db()
     response = client.get(f'/zmz/customers/{inst.id}')
@@ -59,7 +59,7 @@ def test_admin_customers_CRUD(client, admin_logged, created_db):
 
 
 @pytest.mark.django_db
-def test_user_customers_CRUD(client, user_logged, created_db):
+def test_user_customers_CRUD(client, user_logged, db_create):
     inst = models.Customers.objects.all().first()
     inst.refresh_from_db()
     response = client.get(f'/zmz/customers/{inst.id}')
